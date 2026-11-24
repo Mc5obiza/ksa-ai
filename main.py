@@ -116,7 +116,12 @@ def load_memory(file_path):
     if os.path.exists(file_path):
         with open(file_path,"r") as f:
             return json.load(f)
-    return []
+    return [
+        {
+            "role":"system",
+            "content":SYSTEM_PROMPT
+        }
+    ]
 def save_memory(file_path,memory):
     with open(file_path,"w") as f:
         json.dump(memory,f)
@@ -126,32 +131,39 @@ while True:
     if message.startswith("/exit"):
         save_memory("memory.json",history)
         break
-    history.append({
-        "role":"user",
-        "content":message
-    })
-    stream = client.chat.completions.create(
-        model = "openrouter/free",
-        messages=history,
-        stream=True
-    )
-    response = []
-    for chunk in stream:
-        if chunk.choices:
-            if chunk.usage:
-                usage["completion_token"]+=chunk.usage.completion_tokens
-                usage["prompt_tokens"]+=chunk.usage.prompt_tokens
-                usage["total_token"]+=chunk.usage.total_tokens
-                usage["model"] = chunk.model
-            content = chunk.choices[0].delta.content
-            if content:
-                print(content,end ="")
-                response.append(content)
-    full_response = "".join(response)
-    history.append({
-        "role":"assistant",
-        "content":full_response
-    })
-    print()
+    if message.startswith("/help"):
+        print("/exit -> quit the convesation")
+        print("/clear -> clear the memory")
+        print("/usage -> usag of user")
+    elif message.startswith("/usage"):
+        print(usage)
+    else:
+        history.append({
+            "role":"user",
+            "content":message
+        })
+        stream = client.chat.completions.create(
+            model = "openrouter/free",
+            messages=history,
+            stream=True
+        )
+        response = []
+        for chunk in stream:
+            if chunk.choices:
+                if chunk.usage:
+                    usage["completion_token"]+=chunk.usage.completion_tokens
+                    usage["prompt_tokens"]+=chunk.usage.prompt_tokens
+                    usage["total_token"]+=chunk.usage.total_tokens
+                    usage["model"] = chunk.model
+                content = chunk.choices[0].delta.content
+                if content:
+                    print(content,end ="")
+                    response.append(content)
+        full_response = "".join(response)
+        history.append({
+            "role":"assistant",
+            "content":full_response
+        })
+        print()
 
 
